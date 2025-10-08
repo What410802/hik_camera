@@ -138,7 +138,7 @@ protected:
 	// bool is_connected_ = false; /// Should not maintained internally, use MV_CC_IsDeviceConnected instead
 	std::string camera_serial_;
 	uint capture_timeout_ms_; /// Time out time in capturing image
-	// MV_CC_PIXEL_CONVERT_PARAM_EX params_MV_conv;
+	MV_CC_PIXEL_CONVERT_PARAM_EX params_MV_conv;
 	MV_FRAME_OUT_INFO_EX frame_info_;
 	
 	OnSetParametersCallbackHandle::SharedPtr set_parameters_callback_;
@@ -174,6 +174,18 @@ protected:
 		std::string,
 		MvGvspPixelType
 	> image_encodings_2_MvGvspPixelType = {
+		// {
+		// 	sensor_msgs::image_encodings::BAYER_RGGB8,
+		// 	PixelType_Gvsp_BayerRG8
+		// },
+		// {
+		// 	sensor_msgs::image_encodings::BAYER_GRBG8,
+		// 	PixelType_Gvsp_BayerGR8
+		// },
+		{
+			sensor_msgs::image_encodings::TYPE_8UC1,
+			PixelType_Gvsp_Mono8
+		},
 		{
 			sensor_msgs::image_encodings::RGB8,
 			PixelType_Gvsp_RGB8_Packed
@@ -181,6 +193,10 @@ protected:
 		{
 			sensor_msgs::image_encodings::BGR8,
 			PixelType_Gvsp_BGR8_Packed
+		},
+		{
+			sensor_msgs::image_encodings::YUV422,
+			PixelType_Gvsp_YUV422_Packed
 		},
 	};
 	
@@ -257,10 +273,10 @@ protected:
 					return MV_E_SUPPORT;
 				}
 				
-				// params_MV_conv.enDstPixelType = tmp->second;
-				MV_CC_StopGrabbing(camera_handle_);
-				CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", tmp->second), "Error setting PixelFormat",);
-				CHECK_RET(MV_CC_StartGrabbing(camera_handle_), "Error in `MV_CC_StartGrabbing` in lambda `pixel_format`",);
+				params_MV_conv.enDstPixelType = tmp->second;
+				// MV_CC_StopGrabbing(camera_handle_);
+				// CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", tmp->second), "Error setting PixelFormat",);
+				// CHECK_RET(MV_CC_StartGrabbing(camera_handle_), "Error in `MV_CC_StartGrabbing` in lambda `pixel_format`",);
 				msg.encoding = param.as_string();
 				
 				return MV_OK;
@@ -554,17 +570,18 @@ protected:
 		get_parameter("image_topic", image_topic_);
 		INFO("Got `hw_DeviceSerialNumber`, `image_topic` in `init_this`: \"%s\", \"%s\"", camera_serial_.c_str(), image_topic_.c_str());
 		
-		get_parameter("hw_Width", msg.width);
-		get_parameter("hw_Height", msg.height);
+		params_MV_conv.enSrcPixelType = PixelType_Gvsp_BayerRG8;
+		get_parameter("hw_Width", msg.width); params_MV_conv.nWidth = msg.width;
+		get_parameter("hw_Height", msg.height); params_MV_conv.nHeight = msg.height;
 		msg.step = msg.width * 3;
 		msg.data.resize(msg.step * msg.height);
-		// {
-		// int64_t tmp;
-		// get_parameter("hw_PixelFormat", tmp);
-		// params_MV_conv.enSrcPixelType = static_cast<MvGvspPixelType>(tmp);
-		// }
-		// INFO("Got `hw_Width`, `hw_Height`, `hw_PixelFormat` in `init_this`: \"%d\", \"%d\", %lx", 
-		// 	params_MV_conv.nWidth, params_MV_conv.nHeight, static_cast<int64_t>(params_MV_conv.enSrcPixelType));
+		{
+		int64_t tmp;
+		get_parameter("hw_PixelFormat", tmp);
+		params_MV_conv.enSrcPixelType = static_cast<MvGvspPixelType>(tmp);
+		}
+		INFO("Got `hw_Width`, `hw_Height`, `hw_PixelFormat` in `init_this`: \"%d\", \"%d\", %lx", 
+			params_MV_conv.nWidth, params_MV_conv.nHeight, static_cast<int64_t>(params_MV_conv.enSrcPixelType));
 	}
 
 	// ---------------- After all initializations, the core functionality ----------------
@@ -584,29 +601,30 @@ protected:
 					return;
 			}
 		}
-		
 		#ifdef TIMING_ON
 		INFO("#t| Checked connection: %ld ms", get_ms_());
 		#endif
 		/// Extract from SDK
-		// static MV_FRAME_OUT frame; /// MV_FRAME_OUT stores image address and info only
-		// CHECK_NO_RET(MV_CC_GetImageBuffer(camera_handle_, &frame, capture_timeout_ms_),
-		// 	"Failed to get image buffer in `capture_and_send`. Disconnected", return)
-		
-		// INFO("#t| Done MV_CC_GetImageBuffer: %ld ms", get_ms_());
+		static MV_FRAME_OUT frame; /// MV_FRAME_OUT stores image address and info only
+		CHECK_NO_RET(MV_CC_GetImageBuffer(camera_handle_, &frame, capture_timeout_ms_),
+			"Failed to get image buffer in `capture_and_send`. Disconnected", return)
+		#ifdef TIMING_ON
+		INFO("#t| Done MV_CC_GetImageBuffer: %ld ms", get_ms_());
+		#endif
 		/// Prepare message /// Moved to when this get_parameter hw_Width, hw_Height
 		// msg.width = frame.stFrameInfo.nExtendWidth;
 		// msg.step = msg.width * 3;
 		// msg.height = frame.stFrameInfo.nExtendHeight;
 		// msg.data.resize(msg.step * msg.height);
-		
-		// INFO("#t| Done resize: %ld ms", get_ms_());
-		/* LOW EFFICIENCY: MV_CC_ConvertPixelTypeEx
-		params_MV_conv.nWidth = frame.stFrameInfo.nExtendWidth;
-		params_MV_conv.nHeight = frame.stFrameInfo.nExtendHeight;
+		#ifdef TIMING_ON
+		INFO("#t| Done resize: %ld ms", get_ms_());
+		#endif
+		/// LOW EFFICIENCY: MV_CC_ConvertPixelTypeEx
+		// params_MV_conv.nWidth = frame.stFrameInfo.nExtendWidth;
+		// params_MV_conv.nHeight = frame.stFrameInfo.nExtendHeight;
 		params_MV_conv.pSrcData = frame.pBufAddr;
 		params_MV_conv.nSrcDataLen = frame.stFrameInfo.nFrameLen;
-		params_MV_conv.enSrcPixelType = frame.stFrameInfo.enPixelType;
+		// params_MV_conv.enSrcPixelType = frame.stFrameInfo.enPixelType;
 		// INFO("Converting: Source image PixelType (HEX): %lx", params_MV_conv.enSrcPixelType);
 		params_MV_conv.pDstBuffer = msg.data.data();
 		// params_MV_conv.nDstLen = msg.data.size();
@@ -616,18 +634,18 @@ protected:
 		);
 		
 		INFO("#t| Done MV_CC_ConvertPixelTypeEx: %ld ms", get_ms_());
-		*/
+		
 		// memcpy(msg.data.data(), frame.pBufAddr, msg.data.size());
 		
-		CHECK_NO_RET(MV_CC_GetOneFrameTimeout(
-				camera_handle_, 
-				msg.data.data(), 
-				msg.data.size(), 
-				&frame_info_, 
-				capture_timeout_ms_),
-			"Error in `MV_CC_GetOneFrameTimeout` in `capture_and_send`",
-			is_connected = false;
-		);
+		// CHECK_NO_RET(MV_CC_GetOneFrameTimeout(
+		// 		camera_handle_, 
+		// 		msg.data.data(), 
+		// 		msg.data.size(), 
+		// 		&frame_info_, 
+		// 		capture_timeout_ms_),
+		// 	"Error in `MV_CC_GetOneFrameTimeout` in `capture_and_send`",
+		// 	is_connected = false;
+		// );
 		#ifdef TIMING_ON
 		INFO("#t| Done making msg: %ld ms", get_ms_());
 		#endif
@@ -639,10 +657,12 @@ protected:
 		INFO("#t| Done publish: %ld ms", get_ms_());
 		#endif
 		/// Release things SDK produced
-		// CHECK_NO_RET(MV_CC_FreeImageBuffer(camera_handle_, &frame),
-		// 	"Error in `MV_CC_FreeImageBuffer` in `capture_and_send`",
-		// );
-		// INFO("#t| Done all: %ld ms", get_ms_());
+		CHECK_NO_RET(MV_CC_FreeImageBuffer(camera_handle_, &frame),
+			"Error in `MV_CC_FreeImageBuffer` in `capture_and_send`",
+		);
+		#ifdef TIMING_ON
+		INFO("#t| Done all: %ld ms", get_ms_());
+		#endif
 	}
 	// void inline capture_and_send_continuously(){
 	// 	for(;;){
