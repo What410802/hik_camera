@@ -13,10 +13,10 @@
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>rclcpp_components</depend>
-  <depend>camera_info_manager</depend>
+  <!-- <depend>camera_info_manager</depend> -->
   <depend>mvs</depend>
-  <depend>image_transport</depend>
-  <depend>image_transport_plugins</depend>
+  <!-- <depend>image_transport</depend>
+  <depend>image_transport_plugins</depend> -->
   <!-- <exec_depend>camera_calibration</exec_depend> -->
 
   <test_depend>ament_lint_auto</test_depend>

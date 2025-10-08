@@ -22,11 +22,11 @@ def generate_launch_description():
 			parameters=[
 				{'camera_serial': LaunchConfiguration('camera_serial')},
 				{'image_topic': '/image_raw'},
-				{"capture_timeout_msec": 1000},
+				{"capture_timeout_ms": 500},
 				
 				{'exposure_time': 5000.},
 				{'gain': 0.0},
-				{'frame_rate': 90},
+				{'frame_rate': 165},
 				{'pixel_format': 'rgb8'},
 			]
 		)

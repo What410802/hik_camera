@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
 project(hik_camera)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)  # Require C++17
 # add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Ofast>)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -33,11 +34,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(rclcpp_components REQUIRED)
-find_package(camera_info_manager REQUIRED)
-find_package(image_transport REQUIRED)
-find_package(OpenCV REQUIRED)
+# find_package(camera_info_manager REQUIRED)
+# find_package(image_transport REQUIRED)
+# find_package(cv_bridge REQUIRED)
+# find_package(OpenCV REQUIRED)
 
 if(BUILD_TESTING)
 	find_package(ament_lint_auto REQUIRED)
@@ -57,9 +58,9 @@ ament_target_dependencies(${PROJECT_NAME}
 	"rclcpp"
 	"sensor_msgs"
 	# "cv_bridge"
-	"image_transport"
+	# "image_transport"
 	"rclcpp_components"
-	"OpenCV"
+	# "OpenCV"
 )
 target_link_libraries(${PROJECT_NAME}
 	FormatConversion
@@ -71,7 +72,6 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>)
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)  # Require C++17
 
 # 安装节点
 install(TARGETS ${PROJECT_NAME}
