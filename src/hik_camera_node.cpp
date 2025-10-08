@@ -74,6 +74,9 @@ public:
 	inline HikCameraNode(rclcpp::NodeOptions options) : rcl::Node("hik_camera_node", modify_options(options)){
 		INFO("Going to start HIK camera");
 		
+		/// Timing
+		start_ = std::chrono::system_clock::now();
+		
 		/// Initialize the hardware, and fetch params in TABLE from camera to Node
 		init_SDK_and_camera();
 		INFO("Hardware-side initialized");
@@ -110,12 +113,23 @@ public:
 	}
 
 	inline ~HikCameraNode(){
+		if(capture_thread_.joinable()){
+			capture_thread_.join();
+		}
+		else{
+			ERR("Cannot join `capture_thread_`");
+		}
 		INFO("Going to destroy HikCameraNode with device serial (HEX): %s", camera_serial_.c_str());
 		finalize_camera_and_SDK();
 		INFO("Hik camera node deconstructed");
 	}
 	
 protected:
+	std::chrono::system_clock::time_point start_;
+	long inline get_ms_(){
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_).count();
+	}
+	
 	void *camera_handle_ = nullptr;	// 相机句柄
 	bool is_connected_ = false;		// 相机连接状态
 	const static uint max_retries = 4;
@@ -133,7 +147,7 @@ protected:
 	uint queue_size_ = 10;
 	rcl::QoS qos_ = rcl::QoS(rcl::KeepLast(queue_size_), rmw_qos_profile_sensor_data);
 	
-	// std::thread capture_thread_;
+	std::thread capture_thread_;
 	
 	rcl::TimerBase::SharedPtr 
 		reconnect_timer_,	// 断线重连定时器
@@ -199,16 +213,27 @@ protected:
 		{
 			"frame_rate", 
 			[this](const rcl::Parameter &param)->MV_RET_T{
-				INFO("Fetched `frame_rate`: %ld (FPS)", param.as_int());
-				if(capture_timer_ != nullptr && !capture_timer_->is_canceled()){
-					INFO("Going to cancel the timer controlling frame rate");
-					capture_timer_->cancel();
+				// INFO("Fetched `frame_rate`: %ld (FPS)", param.as_int());
+				// if(capture_timer_ != nullptr && !capture_timer_->is_canceled()){
+				// 	INFO("Going to cancel the timer controlling frame rate");
+				// 	capture_timer_->cancel();
+				// }
+				// capture_timer_ = create_wall_timer(
+				// 	1.0s / param.as_int(),
+				// 	std::bind(&HikCameraNode::capture_and_send, this)
+				// );
+				// INFO("Timer controlling frame rate reset");
+				// return MV_OK;
+				if(capture_thread_.joinable()){
+					capture_thread_.join();
 				}
-				capture_timer_ = create_wall_timer(
-					1.0s / param.as_int(),
-					std::bind(&HikCameraNode::capture_and_send, this)
-				);
-				INFO("Timer controlling frame rate reset");
+				capture_thread_ = std::thread{[this]()->void{
+						std::this_thread::sleep_for(1s); /// Avoid unset changes in other lambda
+						for(;;){
+							capture_and_send();
+						}
+					}
+				};
 				return MV_OK;
 			}
 		},
@@ -425,7 +450,7 @@ protected:
 		
 		if(device_list.nDeviceNum == 0){
 			WARN("No HIK camera found in `find_proper_camera`");
-			std::this_thread::sleep_for(std::chrono::seconds(1)); /// Avoid overwhelming messages
+			std::this_thread::sleep_for(1s); /// Avoid overwhelming messages
 			retries++;
 			goto __restart_finding_device;
 		}
@@ -495,7 +520,7 @@ protected:
 		CHECK_RET(create_camera_handle(), "Error in `create_camera_handle` in `init_camera`",)
 		/// Layer 2
 		CHECK_RET(open_camera(), "Error in `open_camera` in `init_camera`",)
-		CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", PixelType_Gvsp_BayerRG8), "Error setting PixelFormat",);
+		CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", PixelType_Gvsp_RGB8_Packed), "Error setting PixelFormat",);
 		/// On Layer 2, start capturing
 		CHECK_RET(MV_CC_StartGrabbing(camera_handle_), "Error in `MV_CC_StartGrabbing` in `init_camera`",)
 		is_connected_ = true;
@@ -558,8 +583,10 @@ protected:
 
 	// ---------------- After all initializations ----------------
 	void inline capture_and_send(){
+		INFO("#t| Enter: %ld ms", get_ms_());
 		CHECK_NO_RET(check_and_repair_connection(), "`check_and_repair_connection` failed. return", return);
 		
+		INFO("#t| Checked connection: %ld ms", get_ms_());
 		/// Extract from SDK
 		static MV_FRAME_OUT frame; /// MV_FRAME_OUT stores image address and info only
 		CHECK_NO_RET(MV_CC_GetImageBuffer(camera_handle_, &frame, capture_timeout_msec),
@@ -567,12 +594,15 @@ protected:
 			{is_connected_ = false; retries++; return;}
 		)
 		
+		INFO("#t| Done MV_CC_GetImageBuffer: %ld ms", get_ms_());
 		/// Prepare message
 		msg.width = frame.stFrameInfo.nExtendWidth;
 		msg.step = msg.width * 3;
 		msg.height = frame.stFrameInfo.nExtendHeight;
 		msg.data.resize(msg.step * msg.height);
 		
+		INFO("#t| Done resize: %ld ms", get_ms_());
+		/* LOW EFFICIENCY: MV_CC_ConvertPixelTypeEx
 		params_MV_conv.nWidth = frame.stFrameInfo.nExtendWidth;
 		params_MV_conv.nHeight = frame.stFrameInfo.nExtendHeight;
 		params_MV_conv.pSrcData = frame.pBufAddr;
@@ -586,15 +616,22 @@ protected:
 			"Error in `MV_CC_ConvertPixelTypeEx` in `capture_and_send`",
 		);
 		
+		INFO("#t| Done MV_CC_ConvertPixelTypeEx: %ld ms", get_ms_());
+		*/
+		memcpy(msg.data.data(), frame.pBufAddr, msg.data.size());
+		INFO("#t| Done memcpy: %ld ms", get_ms_());
+		
 		msg.header.set__stamp(now());
 		image_pub_->publish(msg);
 		// camera_info_msg_.header = msg.header;
 		// camera_pub_.publish(msg, camera_info_msg_);
 		
+		INFO("#t| Done publish: %ld ms", get_ms_());
 		/// Release things SDK produced
 		CHECK_NO_RET(MV_CC_FreeImageBuffer(camera_handle_, &frame),
 			"Error in `MV_CC_FreeImageBuffer` in `capture_and_send`",
 		);
+		INFO("#t| Done all: %ld ms", get_ms_());
 	}
 	// void inline capture_and_send_continuously(){
 	// 	for(;;){
