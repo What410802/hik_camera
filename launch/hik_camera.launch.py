@@ -24,9 +24,9 @@ def generate_launch_description():
 				{'image_topic': '/image_raw'},
 				{"capture_timeout_msec": 1000},
 				
-				{'exposure_time': 1000.},
-				{'gain': 1.0},
-				{'frame_rate': 120},
+				{'exposure_time': 5000.},
+				{'gain': 0.0},
+				{'frame_rate': 90},
 				{'pixel_format': 'rgb8'},
 			]
 		)
