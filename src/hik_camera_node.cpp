@@ -524,7 +524,7 @@ protected:
 		CHECK_RET(create_camera_handle(), "Error in `create_camera_handle` in `init_camera`",)
 		/// Layer 2
 		CHECK_RET(open_camera(), "Error in `open_camera` in `init_camera`",)
-		CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", PixelType_Gvsp_RGB8_Packed), "Error setting PixelFormat",);
+		CHECK_NO_RET(MV_CC_SetEnumValue(camera_handle_, "PixelFormat", PixelType_Gvsp_BayerRG8), "Error setting PixelFormat",);
 		/// On Layer 2, start capturing
 		CHECK_RET(MV_CC_StartGrabbing(camera_handle_), "Error in `MV_CC_StartGrabbing` in `init_camera`",)
 		INFO("Camera connected successfully.");
@@ -575,11 +575,11 @@ protected:
 		get_parameter("hw_Height", msg.height); params_MV_conv.nHeight = msg.height;
 		msg.step = msg.width * 3;
 		msg.data.resize(msg.step * msg.height);
-		{
-		int64_t tmp;
-		get_parameter("hw_PixelFormat", tmp);
-		params_MV_conv.enSrcPixelType = static_cast<MvGvspPixelType>(tmp);
-		}
+		// {
+		// int64_t tmp;
+		// get_parameter("hw_PixelFormat", tmp);
+		// params_MV_conv.enSrcPixelType = static_cast<MvGvspPixelType>(tmp);
+		// }
 		INFO("Got `hw_Width`, `hw_Height`, `hw_PixelFormat` in `init_this`: \"%d\", \"%d\", %lx", 
 			params_MV_conv.nWidth, params_MV_conv.nHeight, static_cast<int64_t>(params_MV_conv.enSrcPixelType));
 	}
@@ -632,9 +632,9 @@ protected:
 		CHECK_NO_RET(MV_CC_ConvertPixelTypeEx(camera_handle_, &params_MV_conv),
 			"Error in `MV_CC_ConvertPixelTypeEx` in `capture_and_send`",
 		);
-		
+		#ifdef TIMING_ON
 		INFO("#t| Done MV_CC_ConvertPixelTypeEx: %ld ms", get_ms_());
-		
+		#endif
 		// memcpy(msg.data.data(), frame.pBufAddr, msg.data.size());
 		
 		// CHECK_NO_RET(MV_CC_GetOneFrameTimeout(

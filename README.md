@@ -4,9 +4,9 @@
 
 # HikVision Camera Package in ROS2 Humble
 
-## Purpose
+## Purpose & Functionalities
 
-This package provides the functionality of using Hikvision cameras in ROS2 Humble. This includes reading and setting exposure time, gain, frame rate, pixel format, etc. from the ROS2 parameter system, as well as reading sequence numbers, frame rates, and other parameters from the camera and publishing them to the parameter system, and the most basic function of obtaining images from the camera and publishing them to the '/image_raw' topic, supporting reconnection and hardware frame rate output.
+This package provides the functionality of using Hikvision cameras in ROS2 Humble. This includes reading and setting exposure time, gain, frame rate, pixel format, etc. from the ROS2 parameter system, as well as reading sequence numbers, frame rates, and other parameters from the camera and publishing them to the parameter system, and the most basic function of obtaining images from the camera and publishing them to the '/image_raw' topic, supporting offline reconnection and hardware frame rate output. The commandline echo and the frame rate shown in `rviz2` both reached >160FPS.
 
 ## Usage
 
@@ -14,6 +14,8 @@ Prerequisite:
 - Ubuntu 22.04, with the latest gcc/g++ and make have been installed.
 
 Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node. (**Recommended**)
+
+When you use `rviz2` to view the images, do not forget to set client-side QoS to "Best Effort", and modify the frame rate to a proper value.
 
 ## Code description/explanation
 
@@ -45,7 +47,9 @@ The definition part of `HikCameraNode` contains:
 
 ## 目的
 
-本包提供了在ROS2 Humble中使用海康相机的功能。包括从ROS2参数系统中读取并设置曝光时间 (Exposure Time)、增益 (Gain)、帧率 (Frame Rate)、图像格式 (Pixel Format)等，以及从相机读取序列号、帧率等参数并发布到参数系统，和最基本的从相机获取图片并发布到`/image_raw`话题的功能，支持断线重连和实时相机（硬件）帧率输出。
+本包提供了在ROS2 Humble中使用海康相机的功能。包括从ROS2参数系统中读取并设置曝光时间（Exposure Time）、增益（Gain）、帧率（Frame Rate）、图像格式（Pixel Format，目前支持`cpp`代码中`image_encodings_2_MvGvspPixelType`所包含的像素格式）等，以及从相机读取序列号、帧率等参数并发布到参数系统，和最基本的从相机获取图片并发布到`/image_raw`话题的功能。
+
+支持断线重连和实时相机（硬件）帧率输出。实测命令行回显帧率和`rviz2`上显示的帧率在默认分辨率下均达到了>160FPS。
 
 ## 使用
 
@@ -53,6 +57,8 @@ The definition part of `HikCameraNode` contains:
 - Ubuntu 22.04，已安装最新gcc/g++和make。
 
 将包的根目录`hik_camera`放置到你的ROS2工作区中，切换到工作区目录下，（增加执行权限并）依次运行`src/hik_camera/build.zsh`,`source src/hik_camera/launch.zsh`即可构建工作区并启动节点。（**推荐**）
+
+通过`rviz2`查看时，注意将接收端的话题服务策略设置到"Best Effort"模式，并更改`rviz2`中的帧率。
 
 ## 代码说明
 
@@ -73,6 +79,7 @@ The definition part of `HikCameraNode` contains:
 		- 其中穿插计时功能。打开代码文件开头的`TIMING_ON`宏，可在运行时输出每次调用内部各功能的时间消耗。
 
 ## Bibliography
+
 - [Enable Multicast for `lo` in order to pass the test case on the website tutorial of ROS2](https://autowarefoundation.github.io/autoware-documentation/main/installation/additional-settings-for-developers/network-configuration/enable-multicast-for-lo/)
 
 
@@ -80,3 +87,4 @@ The definition part of `HikCameraNode` contains:
 
 - Decided not to use try...catch to handle errors. https://learn.microsoft.com/en-us/cpp/cpp/errors-and-exception-handling-modern-cpp?view=msvc-170
 - 引入某些头文件后，需要在包的根目录下建立空文件夹`config`才能通过构建流程并正常运行，且Git默认忽略空目录。改进方法：在`build.zsh`脚本中加上新建文件夹功能。
+- 理论上，也可以通过主动断线重连（如代码中原先更改pixel format的做法）的方法来修改**帧率**，以避免运行时无法更改帧率的问题。但此方法可能对画面的连续性造成一定的伤害，~~故仅用此方法设置了hardware级的PixelFormat~~因为此做法导致硬件帧率太低（~80FPS），故仅放进注释里供参考。
