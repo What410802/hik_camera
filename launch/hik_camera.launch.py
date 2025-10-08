@@ -26,7 +26,7 @@ def generate_launch_description():
 				
 				{'exposure_time': 1000.},
 				{'gain': 1.0},
-				{'frame_rate': 20},
+				{'frame_rate': 120},
 				{'pixel_format': 'rgb8'},
 			]
 		)

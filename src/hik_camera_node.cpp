@@ -86,15 +86,14 @@ public:
 		INFO("hw_DeviceSerialNumber: \"%s\"; image_topic: \"%s\"", camera_serial_.c_str(), image_topic_.c_str());
 		// camera_name_ = declare_parameter("camera_name", "HIK VISION Test");
 		// camera_info_manager_ = std::make_unique<camera_info_manager::CameraInfoManager>(this, camera_name_);
-		/// Queue size: 10, QoS: BEST_EFFORT
-		image_pub_ = create_publisher<sensor_msgs::msg::Image>(image_topic_, 10);
+		image_pub_ = create_publisher<sensor_msgs::msg::Image>(image_topic_, qos_);
 		// camera_pub_ = image_transport::create_camera_publisher(this, image_topic_, rmw_qos_profile_sensor_data);
 		
 		/// Timers: Check camera connection every 1ms; grab image every 1/FPS (already set in parameter init)
-		reconnect_timer_ = create_wall_timer(100ms, 
-			bind(&HikCameraNode::check_and_repair_connection, this)
-		);
-		get_dynamic_params_timer_ = create_wall_timer(1000ms, 
+		// reconnect_timer_ = create_wall_timer(500ms, 
+		// 	bind(&HikCameraNode::check_and_repair_connection, this)
+		// );
+		get_dynamic_params_timer_ = create_wall_timer(2s, 
 			bind(&HikCameraNode::INFO_params_runtime_batch, this)
 		);
 		
@@ -113,7 +112,7 @@ public:
 	inline ~HikCameraNode(){
 		INFO("Going to destroy HikCameraNode with device serial (HEX): %s", camera_serial_.c_str());
 		finalize_camera_and_SDK();
-		INFO("Hik camera node closed");
+		INFO("Hik camera node deconstructed");
 	}
 	
 protected:
@@ -130,6 +129,9 @@ protected:
 	rcl::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;	// 图像发布者
 	// image_transport::CameraPublisher camera_pub_;
 	sensor_msgs::msg::Image msg;
+	/// Queue size: 10, QoS: BEST_EFFORT
+	uint queue_size_ = 10;
+	rcl::QoS qos_ = rcl::QoS(rcl::KeepLast(queue_size_), rmw_qos_profile_sensor_data);
 	
 	// std::thread capture_thread_;
 	
@@ -197,16 +199,16 @@ protected:
 		{
 			"frame_rate", 
 			[this](const rcl::Parameter &param){
-				INFO("Fetched `frame_rate`: %ld (FPS)", param.as_int());
-				if(capture_timer_ != nullptr && !capture_timer_->is_canceled()){
-					INFO("Going to cancel the timer controlling frame rate");
-					capture_timer_->cancel();
-				}
-				capture_timer_ = create_wall_timer(
-					1.0s / param.as_int(),
-					std::bind(&HikCameraNode::capture_and_send, this)
-				);
-				INFO("Timer controlling frame rate reset");
+				// INFO("Fetched `frame_rate`: %ld (FPS)", param.as_int());
+				// if(capture_timer_ != nullptr && !capture_timer_->is_canceled()){
+				// 	INFO("Going to cancel the timer controlling frame rate");
+				// 	capture_timer_->cancel();
+				// }
+				// capture_timer_ = create_wall_timer(
+				// 	1.0s / param.as_int(),
+				// 	std::bind(&HikCameraNode::capture_and_send, this)
+				// );
+				// INFO("Timer controlling frame rate reset");
 				return MV_OK;
 			}
 		},
@@ -433,7 +435,11 @@ protected:
 		}
 		else{
 			for(uint i = 0; i < device_list.nDeviceNum; i++){
-				if(strcmp(
+				INFO("Comparing in `find_proper_camera`: \"%s\" vs \"%s\"", 
+					reinterpret_cast<const char *>(device_list.pDeviceInfo[i]->SpecialInfo.stUsb3VInfo.chSerialNumber), 
+					camera_serial_.c_str()
+				);
+				if(!strcmp(
 					reinterpret_cast<const char *>(device_list.pDeviceInfo[i]->SpecialInfo.stUsb3VInfo.chSerialNumber), 
 					camera_serial_.c_str()
 				)){ /// C style for efficiency
@@ -505,7 +511,13 @@ protected:
 		if(!is_connected_){
 			WARN("Bad connection detected in `check_and_repair_connection`. Reconnecting to camera...");
 			finalize_camera_and_SDK();
-			return init_camera();
+			switch(const auto _ret = init_camera()){
+				case MV_OK:
+					is_connected_ = true;
+					break;
+				default:
+					return _ret;
+			}
 		}
 		return MV_OK;
 	}
@@ -513,7 +525,7 @@ protected:
 	
 	/// ---- Manage this
 	void inline init_this(){
-		get_parameter("hw_DeviceSerialNumber", camera_serial_);
+		// get_parameter("hw_DeviceSerialNumber", camera_serial_); /// Should not modify in this Node, because reconnecting uses it
 		get_parameter("image_topic", image_topic_);
 		INFO("Got `hw_DeviceSerialNumber`, `image_topic` in `init_this`: \"%s\", \"%s\"", camera_serial_.c_str(), image_topic_.c_str());
 		

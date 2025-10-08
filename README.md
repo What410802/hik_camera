@@ -4,21 +4,20 @@
 
 # HIKVISION Camera Package in ROS2
 
-## Background
+## Purpose
 
-HIKVISION has not officially released a package for ROS2; this project is aimed at filling this blank, providing a package in ROS2 replicating the interfaces provided in MVS C++ SDK.
+This package provides the functionality of using Hikvision cameras in ROS2 Humble. This includes reading and setting exposure time, gain, frame rate, pixel format, etc. from the ROS2 parameter system, as well as reading sequence numbers, frame rates, and other parameters from the camera and publishing them to the parameter system, and the most basic function of obtaining images from the camera and publishing them to the '/image_raw' topic.
 
-## Prerequisites
+## Use
 
-- On Ubuntu 22.04, with `gcc/g++ >= 11.4.0, make >= 4.3` installed.
-<!-- - ROS 2 Humble installed in `/opt` (`/opt/ros/humble`) -->
-- 
+Prerequisite:
+- Ubuntu 22.04, with the latest gcc/g++and make have been installed.
 
-## Improvement made in building process
+Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node.
 
+<!-- ## Improvement made in building process -->
 <!-- - Removed HIKVISION SDK package from the requirement list and put the SDK include files and libs inside the project, in order to improve the easiness of installing the dependencies. -->
 
----
 ---
 
 <a id="zh"></a>
