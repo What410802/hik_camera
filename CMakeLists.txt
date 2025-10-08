@@ -5,7 +5,6 @@ set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
 project(hik_camera)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)  # Require C++17
 # add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Ofast>)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -72,6 +71,7 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)  # Require C++17
 
 # 安装节点
 install(TARGETS ${PROJECT_NAME}

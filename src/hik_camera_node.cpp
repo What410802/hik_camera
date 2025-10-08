@@ -480,7 +480,7 @@ protected:
 		const auto &[_upstream_ret, selected_device] = find_proper_camera();
 		CHECK_EXISTING_RET(_upstream_ret, "Upstream error in `find_proper_camera` in `create_camera_handle`",)
 		
-		CHECK_RET(MV_CC_CreateHandle(&camera_handle_, selected_device),
+		CHECK_RET(MV_CC_CreateHandleWithoutLog(&camera_handle_, selected_device),
 			"Error in `MV_CC_CreateHandle` in `create_camera_handle`",
 			MV_CC_DestroyHandle(&camera_handle_) /// Because here is Layer 1
 		)

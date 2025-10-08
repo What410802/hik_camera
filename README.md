@@ -1,4 +1,4 @@
-<font face="STCAIYUN">[English](#en) | [中文](#zh)</font>
+<font face="Noto Serif">[English](#en)</font> | <font face="Noto Serif CJK SC">[中文](#zh)</font>
 
 <a id="en"></a>
 
@@ -6,14 +6,14 @@
 
 ## Purpose
 
-This package provides the functionality of using Hikvision cameras in ROS2 Humble. This includes reading and setting exposure time, gain, frame rate, pixel format, etc. from the ROS2 parameter system, as well as reading sequence numbers, frame rates, and other parameters from the camera and publishing them to the parameter system, and the most basic function of obtaining images from the camera and publishing them to the '/image_raw' topic.
+This package provides the functionality of using Hikvision cameras in ROS2 Humble. This includes reading and setting exposure time, gain, frame rate, pixel format, etc. from the ROS2 parameter system, as well as reading sequence numbers, frame rates, and other parameters from the camera and publishing them to the parameter system, and the most basic function of obtaining images from the camera and publishing them to the '/image_raw' topic, supporting reconnection and hardware frame rate output.
 
 ## Usage
 
 Prerequisite:
-- Ubuntu 22.04, with the latest gcc/g++and make have been installed.
+- Ubuntu 22.04, with the latest gcc/g++ and make have been installed.
 
-Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node.
+Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node. (**Recommended**)
 
 ## Code description/explanation
 
@@ -31,7 +31,7 @@ The definition part of `HikCameraNode` contains:
 	- Image transmission section. The core functionality.
 		- Since the pixel format has been changed through the SDK when the camera starts (including the initial startup and restart when changing some parameters), it is unnecessary and not recommended to change the pixel format here through `MV_CC_ConvertPixelTypeEx`.
 		- The frame fetching function `MV_CC_GetOneFrameTimeout`, which is managed by the user according to the official document, meeting the requirement of loading frames into the member `data` of the message struct.
-		- Among this function, timing functionalities are mixed within, which can output the time consumption of each internal functionality at runtime by opening the `TIMING_ON` macro at the beginning of the code file.
+		- Among this function, timing functionalities are mixed within, which can output the time consumption of each internal functionality at runtime by uncommenting the `TIMING_ON` macro at the beginning of the code file.
 
 
 <!-- ## Improvement made in building process -->
@@ -45,14 +45,14 @@ The definition part of `HikCameraNode` contains:
 
 ## 目的
 
-本包提供了在ROS2 Humble中使用海康相机的功能。包括从ROS2参数系统中读取并设置曝光时间 (Exposure Time)、增益 (Gain)、帧率 (Frame Rate)、图像格式 (Pixel Format)等，以及从相机读取序列号、帧率等参数并发布到参数系统，和最基本的从相机获取图片并发布到`/image_raw`话题的功能。
+本包提供了在ROS2 Humble中使用海康相机的功能。包括从ROS2参数系统中读取并设置曝光时间 (Exposure Time)、增益 (Gain)、帧率 (Frame Rate)、图像格式 (Pixel Format)等，以及从相机读取序列号、帧率等参数并发布到参数系统，和最基本的从相机获取图片并发布到`/image_raw`话题的功能，支持断线重连和实时相机（硬件）帧率输出。
 
 ## 使用
 
 前提条件：
 - Ubuntu 22.04，已安装最新gcc/g++和make。
 
-将包的根目录`hik_camera`放置到ROS2工作区中，切换到工作区目录下，（增加执行权限并）依次运行`src/hik_camera/build.zsh`,`source src/hik_camera/launch.zsh`以构建工作区并启动节点。
+将包的根目录`hik_camera`放置到你的ROS2工作区中，切换到工作区目录下，（增加执行权限并）依次运行`src/hik_camera/build.zsh`,`source src/hik_camera/launch.zsh`即可构建工作区并启动节点。（**推荐**）
 
 ## 代码说明
 
@@ -70,7 +70,7 @@ The definition part of `HikCameraNode` contains:
 	- 图像发送部分。核心功能。
 		- 由于已在相机启动（包括初次启动和更改某些参数时的重新启动）时通过SDK更改了像素格式，故无需且不应通过`MV_CC_ConvertPixelTypeEx`在此处更改像素格式。
 		- 采用官方文档中说的由用户自行管理的取帧函数`MV_CC_GetOneFrameTimeout`，符合将帧加载到消息的`data`成员中的需求。
-		- 其中穿插计时功能，通过打开代码文件开头的`TIMING_ON`宏，可在运行时输出每次调用内部各功能的时间消耗。
+		- 其中穿插计时功能。打开代码文件开头的`TIMING_ON`宏，可在运行时输出每次调用内部各功能的时间消耗。
 
 ## Bibliography
 - [Enable Multicast for `lo` in order to pass the test case on the website tutorial of ROS2](https://autowarefoundation.github.io/autoware-documentation/main/installation/additional-settings-for-developers/network-configuration/enable-multicast-for-lo/)
@@ -79,3 +79,4 @@ The definition part of `HikCameraNode` contains:
 ## Problems encountered and reflections
 
 - Decided not to use try...catch to handle errors. https://learn.microsoft.com/en-us/cpp/cpp/errors-and-exception-handling-modern-cpp?view=msvc-170
+- 引入某些头文件后，需要在包的根目录下建立空文件夹`config`才能通过构建流程并正常运行，且Git默认忽略空目录。改进方法：在`build.zsh`脚本中加上新建文件夹功能。
