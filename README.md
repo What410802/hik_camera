@@ -13,7 +13,7 @@ This package provides the functionality of using Hikvision cameras in ROS2 Humbl
 Prerequisite:
 - Ubuntu 22.04, with the latest gcc/g++ and make have been installed.
 
-Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node. (**Recommended**)
+Place the root directory of the package `hik_comamera` in your ROS2 workspace, change to the workspace directory, and after running `rosdep install --from-paths src -y --ignore-src`, (change execution permissions and) run `hik_comamera/build.zsh` and `source hik_comamera/launch.zsh` in sequence to build the workspace and start the node. (**Recommended**)
 
 When you use `rviz2` to view the images, do not forget to set client-side QoS to "Best Effort", and modify the frame rate to a proper value.
 
@@ -56,7 +56,7 @@ The definition part of `HikCameraNode` contains:
 前提条件：
 - Ubuntu 22.04，已安装最新gcc/g++和make。
 
-将包的根目录`hik_camera`放置到你的ROS2工作区中，切换到工作区目录下，（增加执行权限并）依次运行`src/hik_camera/build.zsh`,`source src/hik_camera/launch.zsh`即可构建工作区并启动节点。（**推荐**）
+将包的根目录`hik_camera`放置到你的ROS2工作区中，切换到工作区目录下，运行`rosdep install --from-paths src -y --ignore-src`后，（增加执行权限并）依次运行`src/hik_camera/build.zsh`,`source src/hik_camera/launch.zsh`即可构建工作区并启动节点。（**推荐**）
 
 通过`rviz2`查看时，注意将接收端的话题服务策略设置到"Best Effort"模式，并更改`rviz2`中的帧率。
 
